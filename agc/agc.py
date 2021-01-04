@@ -18,7 +18,7 @@ import sys
 import os
 import gzip
 import statistics
-from collections import Counter
+from collections import Counter, OrderedDict
 # https://github.com/briney/nwalign3
 # ftp://ftp.ncbi.nih.gov/blast/matrices/
 import nwalign3 as nw
@@ -70,11 +70,43 @@ def get_arguments():
     return parser.parse_args()
 
 def read_fasta(amplicon_file, minseqlen):
-    pass
+    """
+
+    :param amplicon_file: File with FASTA sequences
+    :param minseqlen:
+    :return:
+    """
+    with gzip.open(amplicon_file, "rt") as file:
+        sequence = ""
+        sequence_list = []
+        for line in file:
+            if not line.lstrip().startswith('>'):
+                sequence += line.strip()
+
+            else:
+                if len(sequence) != 0:
+                    sequence_list.append(sequence)
+                sequence = ""
+    if len(sequence) != 0:
+        sequence_list.append(sequence)
+    for sequence in sequence_list:
+        if len(sequence) >= minseqlen:
+            yield sequence
+
+
+
 
 
 def dereplication_fulllength(amplicon_file, minseqlen, mincount):
-    pass
+    sequences = read_fasta(amplicon_file, minseqlen)
+    sequence_list = [x for x in sequences]
+    seq_counter = Counter(sequence_list)
+    print(seq_counter)
+    for seq, count in OrderedDict(sorted(seq_counter.items(), key=lambda t: t[0])).items():
+        print(seq)
+        if count >= mincount:
+            yield [seq, count]
+
 
 
 def get_chunks(sequence, chunk_size):
