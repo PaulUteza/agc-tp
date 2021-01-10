@@ -264,7 +264,21 @@ def abundance_greedy_clustering(amplicon_file, minseqlen, mincount, chunk_size, 
     :param kmer_size: size the kmer needs to be cut
     :return: List of OTU
     """
-    pass
+    OTU_list = []
+    chimeras_to_remove = list(chimera_removal(amplicon_file, minseqlen,
+                                              mincount, chunk_size, kmer_size))
+    for idx, chimera_to_remove in enumerate(chimeras_to_remove):
+        OTU = True
+        for idx2 in range(idx + 1, len(chimeras_to_remove)):
+            if get_identity(nw.global_align(chimera_to_remove[0],
+                                            chimeras_to_remove[idx2][0])) > 97 and \
+                    chimera_to_remove[1] >= chimeras_to_remove[idx2][1]:
+                OTU_list.append(chimeras_to_remove[idx2])
+                OTU = False
+                break
+        if OTU:
+            OTU_list.append(chimera_to_remove)
+    return OTU_list
 
 def fill(text, width=80):
     """
@@ -281,7 +295,9 @@ def write_OTU(OTU_list, output_file):
     :param OTU_list: List of OTU sequences
     :param output_file: file to save
     """
-    pass
+    with open(output_file, 'w') as file:
+        for idx, OTU in enumerate(OTU_list):
+            file.write('>OTU_{} occurrence:{}\n{}\n'.format(idx + 1, OTU[1], fill(OTU[0])))
 
 
 #==============================================================
@@ -302,6 +318,10 @@ def main():
     kmer_size = args.kmer_size
     output_file = args.output_file
 
+    # Check if file exists
+    if isfile(file):
+        OTU_list = abundance_greedy_clustering(file, minseqlen, mincount, chunk_size, kmer_size)
+        write_OTU(OTU_list, output_file)
 
 
 if __name__ == '__main__':
